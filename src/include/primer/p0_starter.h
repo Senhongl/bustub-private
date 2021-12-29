@@ -113,8 +113,8 @@ class RowMatrix : public Matrix<T> {
    * @param cols The number of columns
    */
   RowMatrix(int rows, int cols) : Matrix<T>(rows, cols) {
-    data_ = reinterpret_cast<T **>(malloc(sizeof(T **) * rows));
-    Matrix<T>::linear_ = reinterpret_cast<T **>(malloc(sizeof(T *) * rows * cols));
+    data_ = new T*[std::as_const(rows)];
+    Matrix<T>::linear_ = new T[std::as_const(rows) * std::as_const(cols)];
     Matrix<T>::rows_ = rows;
     Matrix<T>::cols_ = cols;
     int idx = 0;
@@ -184,10 +184,13 @@ class RowMatrix : public Matrix<T> {
    * @throws OUT_OF_RANGE if `source` is incorrect size
    */
   void FillFrom(const std::vector<T> &source) override {
-    int size = reinterpret_cast<int>(source.size());
-    if (size != Matrix<T>::rows_ * Matrix<T>::cols_) throw Exception(ExceptionType::OUT_OF_RANGE, "Out of range.");
+    int matrix_size = Matrix<T>::rows_ * Matrix<T>::cols_;
+    size_t matrix_size_as_size_t = static_cast<size_t>(matrix_size);
+    if (source.size() != matrix_size_as_size_t) {
+      throw Exception(ExceptionType::OUT_OF_RANGE, "Out of range.");
+    }
     int idx = 0;
-    while (idx < size) {
+    while (idx < matrix_size) {
       Matrix<T>::linear_[idx] = source[idx];
       idx++;
     }
@@ -198,9 +201,9 @@ class RowMatrix : public Matrix<T> {
    *
    * Destroy a RowMatrix instance.
    */
-  ~RowMatrix() {
-    free(data_);
-    free(Matrix<T>::linear_);
+  ~RowMatrix() override {
+    delete [] data_;
+    delete [] Matrix<T>::linear_;
   }
 
  private:
@@ -230,17 +233,18 @@ class RowMatrixOperations {
    * @return The result of matrix addition
    */
   static std::unique_ptr<RowMatrix<T>> Add(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB) {
-    if (matrixA->GetColumnCount() != matrixB->GetColumnCount() || matrixA->GetRowCount() != matrixB->GetRowCount())
+    if (matrixA->GetColumnCount() != matrixB->GetColumnCount() || matrixA->GetRowCount() != matrixB->GetRowCount()) {
       return std::unique_ptr<RowMatrix<T>>(nullptr);
+    }
 
     int rows = matrixB->GetRowCount();
     int cols = matrixB->GetColumnCount();
     auto matrix = std::make_unique<RowMatrix<T>>(rows, cols);
     for (int i = 0; i < rows; i++) {
       for (int j = 0; j < cols; j++) {
-        T valA = matrixA->GetElement(i, j);
-        T valB = matrixB->GetElement(i, j);
-        matrix->SetElement(i, j, valA + valB);
+        T val_a = matrixA->GetElement(i, j);
+        T val_b = matrixB->GetElement(i, j);
+        matrix->SetElement(i, j, val_a + val_b);
       }
     }
     return matrix;
@@ -254,7 +258,9 @@ class RowMatrixOperations {
    * @return The result of matrix multiplication
    */
   static std::unique_ptr<RowMatrix<T>> Multiply(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB) {
-    if (matrixA->GetColumnCount() != matrixB->GetRowCount()) return std::unique_ptr<RowMatrix<T>>(nullptr);
+    if (matrixA->GetColumnCount() != matrixB->GetRowCount()) {
+      return std::unique_ptr<RowMatrix<T>>(nullptr);
+    }
 
     int rows = matrixA->GetRowCount();
     int cols = matrixB->GetColumnCount();
@@ -268,11 +274,11 @@ class RowMatrixOperations {
         // for each element of the new matrix,
         // compute the dot product of ith rows of matrixA and jth columns of matrixB
         int idx = 0;
-        T sum = (T)0;
+        T sum = static_cast<T>(0);
         while (idx < matrixB->GetRowCount()) {  // the second conditions is ignorable
-          T valA = matrixA->GetElement(i, idx);
-          T valB = matrixB->GetElement(idx, j);
-          sum += valA * valB;
+          T val_a = matrixA->GetElement(i, idx);
+          T val_b = matrixB->GetElement(idx, j);
+          sum += val_a * val_b;
           idx++;
         }
         matrix->SetElement(i, j, sum);
