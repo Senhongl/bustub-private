@@ -27,9 +27,9 @@ namespace bustub {
  */
 class Node {
  public:
-  frame_id_t frame;
-  Node *next;
-  Node *prev;
+  frame_id_t frame_;
+  Node *next_;
+  Node *prev_;
 };
 
 /**
@@ -58,10 +58,10 @@ class LRUReplacer : public Replacer {
 
  private:
   // TODO(student): implement me!
-  size_t max_num_pages;
-  size_t cur_num_pages;
-  Node *head;
-  Node *tail;
+  size_t max_num_pages_;
+  size_t cur_num_pages_;
+  Node *head_;
+  Node *tail_;
 };
 
 }  // namespace bustub
