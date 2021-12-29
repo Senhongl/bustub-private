@@ -12,12 +12,16 @@
 
 #pragma once
 
+#include <cstring>
 #include <list>
+#include <map>
 #include <mutex>  // NOLINT
 #include <vector>
 
 #include "buffer/replacer.h"
 #include "common/config.h"
+#include "common/exception.h"
+#include "common/logger.h"
 
 namespace bustub {
 
@@ -27,7 +31,7 @@ namespace bustub {
  */
 class Node {
  public:
-  frame_id_t frame_;
+  frame_id_t frame_id_;
   Node *next_;
   Node *prev_;
 };
@@ -58,8 +62,8 @@ class LRUReplacer : public Replacer {
 
  private:
   // TODO(student): implement me!
+  std::map<frame_id_t, Node *> map_;
   size_t max_num_pages_;
-  size_t cur_num_pages_;
   Node *head_;
   Node *tail_;
 };
