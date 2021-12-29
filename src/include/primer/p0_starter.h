@@ -113,8 +113,8 @@ class RowMatrix : public Matrix<T> {
    * @param cols The number of columns
    */
   RowMatrix(int rows, int cols) : Matrix<T>(rows, cols) {
-    data_ = (T **)malloc(sizeof(T **) * rows);
-    Matrix<T>::linear_ = (T *)malloc(sizeof(T *) * rows * cols);
+    data_ = reinterpret_cast<T **>(malloc(sizeof(T **) * rows));
+    Matrix<T>::linear_ = reinterpret_cast<T **>(malloc(sizeof(T *) * rows * cols));
     Matrix<T>::rows_ = rows;
     Matrix<T>::cols_ = cols;
     int idx = 0;
@@ -184,7 +184,7 @@ class RowMatrix : public Matrix<T> {
    * @throws OUT_OF_RANGE if `source` is incorrect size
    */
   void FillFrom(const std::vector<T> &source) override {
-    int size = (int) source.size();
+    int size = reinterpret_cast<int>(source.size());
     if (size != Matrix<T>::rows_ * Matrix<T>::cols_) throw Exception(ExceptionType::OUT_OF_RANGE, "Out of range.");
     int idx = 0;
     while (idx < size) {
@@ -201,7 +201,7 @@ class RowMatrix : public Matrix<T> {
   ~RowMatrix() {
     free(data_);
     free(Matrix<T>::linear_);
-  };
+  }
 
  private:
   /**
@@ -230,8 +230,9 @@ class RowMatrixOperations {
    * @return The result of matrix addition
    */
   static std::unique_ptr<RowMatrix<T>> Add(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB) {
-    if (matrixA->GetColumnCount() != matrixB->GetColumnCount() || matrixA->GetRowCount() != matrixB->GetRowCount()) return std::unique_ptr<RowMatrix<T>>(nullptr);
-    
+    if (matrixA->GetColumnCount() != matrixB->GetColumnCount() || matrixA->GetRowCount() != matrixB->GetRowCount())
+      return std::unique_ptr<RowMatrix<T>>(nullptr);
+
     int rows = matrixB->GetRowCount();
     int cols = matrixB->GetColumnCount();
     auto matrix = std::make_unique<RowMatrix<T>>(rows, cols);
@@ -264,11 +265,11 @@ class RowMatrixOperations {
     for (int i = 0; i < rows; i++) {
       // then iterate over columns
       for (int j = 0; j < cols; j++) {
-        // for each element of the new matrix, 
+        // for each element of the new matrix,
         // compute the dot product of ith rows of matrixA and jth columns of matrixB
         int idx = 0;
-        T sum = (T) 0;
-        while (idx < matrixB->GetRowCount()) { // the second conditions is ignorable
+        T sum = (T)0;
+        while (idx < matrixB->GetRowCount()) {  // the second conditions is ignorable
           T valA = matrixA->GetElement(i, idx);
           T valB = matrixB->GetElement(idx, j);
           sum += valA * valB;

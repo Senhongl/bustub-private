@@ -26,8 +26,8 @@ namespace bustub {
  * point to the next node
  */
 class Node {
-  public:
-    frame_id_t frame;
+ public:
+  frame_id_t frame;
   Node *next;
   Node *prev;
 };
