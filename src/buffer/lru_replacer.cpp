@@ -14,7 +14,12 @@
 
 namespace bustub {
 
-LRUReplacer::LRUReplacer(size_t num_pages) {}
+LRUReplacer::LRUReplacer(size_t num_pages) {
+    max_num_pages = num_pages;
+    cur_num_pages = 0;
+    head = new Node();
+    tail = head;
+}
 
 LRUReplacer::~LRUReplacer() = default;
 

@@ -22,6 +22,17 @@
 namespace bustub {
 
 /**
+ * Linkedlist node with previous pointer point to the preivous node and a next pointer
+ * point to the next node
+ */
+class Node {
+  public:
+    frame_id_t frame;
+  Node *next;
+  Node *prev;
+};
+
+/**
  * LRUReplacer implements the Least Recently Used replacement policy.
  */
 class LRUReplacer : public Replacer {
@@ -47,6 +58,10 @@ class LRUReplacer : public Replacer {
 
  private:
   // TODO(student): implement me!
+  size_t max_num_pages;
+  size_t cur_num_pages;
+  Node *head;
+  Node *tail;
 };
 
 }  // namespace bustub
