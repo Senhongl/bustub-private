@@ -113,7 +113,7 @@ class RowMatrix : public Matrix<T> {
    * @param cols The number of columns
    */
   RowMatrix(int rows, int cols) : Matrix<T>(rows, cols) {
-    data_ = new T*[std::as_const(rows)];
+    data_ = new T *[std::as_const(rows)];
     Matrix<T>::linear_ = new T[std::as_const(rows) * std::as_const(cols)];
     Matrix<T>::rows_ = rows;
     Matrix<T>::cols_ = cols;
@@ -202,8 +202,8 @@ class RowMatrix : public Matrix<T> {
    * Destroy a RowMatrix instance.
    */
   ~RowMatrix() override {
-    delete [] data_;
-    delete [] Matrix<T>::linear_;
+    delete[] data_;
+    delete[] Matrix<T>::linear_;
   }
 
  private:

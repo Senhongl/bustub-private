@@ -21,8 +21,13 @@ LRUReplacer::LRUReplacer(size_t num_pages) {
 }
 
 LRUReplacer::~LRUReplacer() {
-  delete head_;
-  delete tail_;
+  Node *cur = head_;
+  Node *next;
+  while (cur != nullptr) {
+    next = cur->next_;
+    delete cur;
+    cur = next;
+  }
 }
 
 bool LRUReplacer::Victim(frame_id_t *frame_id) {
