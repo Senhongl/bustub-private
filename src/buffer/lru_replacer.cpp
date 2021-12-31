@@ -12,6 +12,8 @@
 
 #include "buffer/lru_replacer.h"
 
+#include "common/macros.h"
+
 namespace bustub {
 
 LRUReplacer::LRUReplacer(size_t num_pages) {
@@ -30,26 +32,35 @@ LRUReplacer::~LRUReplacer() {
   }
 }
 
-bool LRUReplacer::Victim(frame_id_t *frame_id) {
-  if (map_.empty()) {
-    return false;
-  }
-
-  std::memcpy(frame_id, &(tail_->frame_id_), sizeof(frame_id_t));
+void LRUReplacer::VictimWithoutLock(frame_id_t *frame_id) {
+  *frame_id = tail_->frame_id_;
   map_.erase(*frame_id);
   auto tmp = tail_;
   tail_ = tail_->prev_;
   delete tmp;
   if (tail_ == nullptr) {
     head_ = nullptr;
-    return true;
+    return;
   }
   tail_->next_ = nullptr;
+}
+
+bool LRUReplacer::Victim(frame_id_t *frame_id) {
+  latch_.lock();
+  if (map_.empty()) {
+    latch_.unlock();
+    return false;
+  }
+
+  VictimWithoutLock(frame_id);
+  latch_.unlock();
   return true;
 }
 
 void LRUReplacer::Pin(frame_id_t frame_id) {
+  latch_.lock();
   if (map_.find(frame_id) == map_.end()) {
+    latch_.unlock();
     return;
   }
   Node *node = map_[frame_id];
@@ -74,18 +85,20 @@ void LRUReplacer::Pin(frame_id_t frame_id) {
     tail_ = prev;
   }
   delete node;
+  latch_.unlock();
 }
 
 void LRUReplacer::Unpin(frame_id_t frame_id) {
+  latch_.lock();
   if (map_.find(frame_id) != map_.end()) {
+    latch_.unlock();
     return;
   }
   Node *node = new Node();
   node->frame_id_ = frame_id;
   map_[frame_id] = node;
-  if (map_.size() > max_num_pages_) {
-    Victim(new frame_id_t);
-  }
+  BUSTUB_ASSERT(map_.size() <= max_num_pages_,
+                "The size of map should be always smaller than or equal to the maximum number of pages.");
 
   if (head_ == nullptr) {
     head_ = node;
@@ -95,6 +108,7 @@ void LRUReplacer::Unpin(frame_id_t frame_id) {
     head_->prev_ = node;
     head_ = node;
   }
+  latch_.unlock();
 }
 
 size_t LRUReplacer::Size() { return map_.size(); }

@@ -297,7 +297,7 @@ class RowMatrixOperations {
    */
   static std::unique_ptr<RowMatrix<T>> GEMM(const RowMatrix<T> *matrixA, const RowMatrix<T> *matrixB,
                                             const RowMatrix<T> *matrixC) {
-    return Add(Multiply(matrixA, matrixB), matrixC);
+    return Add(Multiply(matrixA, matrixB).get(), matrixC);
   }
 };
 }  // namespace bustub

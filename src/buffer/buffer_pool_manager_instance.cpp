@@ -49,15 +49,17 @@ BufferPoolManagerInstance::~BufferPoolManagerInstance() {
 
 bool BufferPoolManagerInstance::FlushPgImp(page_id_t page_id) {
   // flush a page regardless of its pin status
+  latch_.lock();
   if (page_table_.find(page_id) != page_table_.end()) {
     frame_id_t flush_frame_id = page_table_[page_id];
     Page *page = &pages_[flush_frame_id];
     if (page->is_dirty_) {
       disk_manager_->WritePage(page_id, page->data_);
-      page->is_dirty_ = false;
     }
+    latch_.unlock();
     return true;
   }
+  latch_.unlock();
   return false;
 }
 
@@ -71,6 +73,7 @@ void BufferPoolManagerInstance::FlushAllPgsImp() {
 Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
   // 1.   If all the pages in the buffer pool are pinned, return nullptr.
   bool ret_flag = true;
+  latch_.lock();
   for (size_t i = 0; i < pool_size_; i++) {
     if (pages_[i].GetPinCount() == 0) {
       ret_flag = false;
@@ -79,19 +82,21 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
   }
 
   if (ret_flag) {
+    latch_.unlock();
     return nullptr;
   }
 
   *page_id = AllocatePage();
   // 2.   Pick a victim page P from either the free list or the replacer. Always pick from the free list first.
-  Page *page;
-  frame_id_t victim_frame_id;
+  Page *page = nullptr;
+  frame_id_t victim_frame_id = -1;
   if (!free_list_.empty()) {
     victim_frame_id = free_list_.front();
     free_list_.pop_front();
   } else {
-    replacer_->Victim(&victim_frame_id);
+    assert(replacer_->Victim(&victim_frame_id) == true);
   }
+  assert(victim_frame_id != -1);
   page = &pages_[victim_frame_id];
   page_table_.erase(page->page_id_);
 
@@ -104,19 +109,22 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
   page->pin_count_ = 1;
   page->is_dirty_ = false;
   page_table_[*page_id] = victim_frame_id;
-
+  disk_manager_->ReadPage(*page_id, page->data_);
+  latch_.unlock();
   return page;
 }
 
 Page *BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) {
   // 1.     Search the page table for the requested page (P).
   Page *page;
+  latch_.lock();
   if (page_table_.find(page_id) != page_table_.end()) {
     // 1.1    If P exists, pin it and return it immediately.
     frame_id_t fetched_frame_id = page_table_[page_id];
     page = &pages_[fetched_frame_id];
     page->pin_count_ += 1;
     replacer_->Pin(fetched_frame_id);
+    latch_.unlock();
     return page;
   }
 
@@ -129,6 +137,7 @@ Page *BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) {
   } else {
     // if no page is available in the free list and all other pages are currently pinned
     if (!replacer_->Victim(&victim_frame_id)) {
+      latch_.unlock();
       return nullptr;
     }
   }
@@ -149,21 +158,25 @@ Page *BufferPoolManagerInstance::FetchPgImp(page_id_t page_id) {
   page->pin_count_ = 1;
   page->is_dirty_ = false;
   disk_manager_->ReadPage(page_id, page->data_);
+  latch_.unlock();
   return page;
 }
 
 bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   // 0.   Make sure you call DeallocatePage!
+  latch_.lock();
   DeallocatePage(page_id);
   // 1.   Search the page table for the requested page (P).
   // 1.   If P does not exist, return true.
   if (page_table_.find(page_id) == page_table_.end()) {
+    latch_.unlock();
     return true;
   }
   // 2.   If P exists, but has a non-zero pin-count, return false. Someone is using the page.
   frame_id_t frame_id = page_table_[page_id];
   Page *page = &pages_[frame_id];
   if (page->pin_count_ > 0) {
+    latch_.unlock();
     return false;
   }
   // 3.   Otherwise, P can be deleted. Remove P from the page table, reset its metadata and return it to the free list.
@@ -177,20 +190,30 @@ bool BufferPoolManagerInstance::DeletePgImp(page_id_t page_id) {
   // it's not saying that the frame is pinned
   // but just a tricky way to remove the frame from the replacer, because now the frame is already in the free list
   replacer_->Pin(frame_id);
+  latch_.unlock();
   return true;
 }
 
 bool BufferPoolManagerInstance::UnpinPgImp(page_id_t page_id, bool is_dirty) {
+  latch_.lock();
+  if (page_table_.find(page_id) == page_table_.end()) {
+    latch_.unlock();
+    return false;
+  }
   frame_id_t unpin_frame_id = page_table_[page_id];
   Page *page = &pages_[unpin_frame_id];
   if (page->pin_count_ <= 0) {
+    latch_.unlock();
     return false;
   }
   page->pin_count_ -= 1;
-  page->is_dirty_ = is_dirty;
+  if (!page->is_dirty_) {
+    page->is_dirty_ = is_dirty;
+  }
   if (page->pin_count_ == 0) {
     replacer_->Unpin(unpin_frame_id);
   }
+  latch_.unlock();
   return true;
 }
 

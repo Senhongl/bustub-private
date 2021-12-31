@@ -190,4 +190,51 @@ TEST(StarterTest, MultiplicationTest) {
     }
   }
 }
+
+/** Test that matrix multiplication works as expected */
+TEST(StarterTest, GEMMTest) {
+  const std::vector<int> source0{1, 2, 3, 4, 5, 6};
+  auto matrix0 = std::make_unique<RowMatrix<int>>(2, 3);
+  matrix0->FillFrom(source0);
+  for (int i = 0; i < matrix0->GetRowCount(); i++) {
+    for (int j = 0; j < matrix0->GetColumnCount(); j++) {
+      EXPECT_EQ(source0[i * matrix0->GetColumnCount() + j], matrix0->GetElement(i, j));
+    }
+  }
+
+  auto matrix1 = std::make_unique<RowMatrix<int>>(3, 2);
+  const std::vector<int> source1{-2, 1, -2, 2, 2, 3};
+  matrix1->FillFrom(source1);
+  for (int i = 0; i < matrix1->GetRowCount(); i++) {
+    for (int j = 0; j < matrix1->GetColumnCount(); j++) {
+      EXPECT_EQ(source1[i * matrix1->GetColumnCount() + j], matrix1->GetElement(i, j));
+    }
+  }
+
+  auto matrix2 = std::make_unique<RowMatrix<int>>(2, 2);
+  const std::vector<int> source2{0, 0, 0, 0};
+  matrix1->FillFrom(source1);
+  for (int i = 0; i < matrix1->GetRowCount(); i++) {
+    for (int j = 0; j < matrix1->GetColumnCount(); j++) {
+      EXPECT_EQ(source2[i * matrix2->GetColumnCount() + j], matrix2->GetElement(i, j));
+    }
+  }
+
+  // The expected result of multiplication
+  const std::vector<int> expected{0, 14, -6, 32};
+
+  // Perform the multiplication operation
+  auto product = RowMatrixOperations<int>::GEMM(matrix0.get(), matrix1.get(), matrix2.get());
+
+  // (2,3) * (3,2) + (2, 2) -> (2,2)
+  EXPECT_EQ(2, product->GetRowCount());
+  EXPECT_EQ(2, product->GetColumnCount());
+
+  for (int i = 0; i < product->GetRowCount(); i++) {
+    for (int j = 0; j < product->GetColumnCount(); j++) {
+      EXPECT_EQ(expected[i * product->GetColumnCount() + j], product->GetElement(i, j));
+    }
+  }
+}
+
 }  // namespace bustub

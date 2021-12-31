@@ -61,11 +61,12 @@ class LRUReplacer : public Replacer {
   size_t Size() override;
 
  private:
-  // TODO(student): implement me!
+  void VictimWithoutLock(frame_id_t *frame_id);
   std::map<frame_id_t, Node *> map_;
   size_t max_num_pages_;
   Node *head_;
   Node *tail_;
+  std::mutex latch_;
 };
 
 }  // namespace bustub
