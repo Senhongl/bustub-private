@@ -172,6 +172,17 @@ class HashTableDirectoryPage {
   uint32_t GetLocalHighBit(uint32_t bucket_idx);
 
   /**
+   * After splitting, we need to check the directory again and fix the incorrect
+   * hashing.
+   */
+  void CheckAndUpdateDirectory(uint32_t bucket_idx);
+
+  /**
+   * Initialize the directory and set the metadata
+   */
+  void InitDirectory(page_id_t page_id, lsn_t lsn);
+
+  /**
    * VerifyIntegrity
    *
    * Verify the following invariants:

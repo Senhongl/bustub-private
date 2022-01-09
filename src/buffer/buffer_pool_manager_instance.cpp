@@ -79,6 +79,7 @@ Page *BufferPoolManagerInstance::NewPgImp(page_id_t *page_id) {
       ret_flag = false;
       break;
     }
+    // LOG_DEBUG("page %d is pinned and its pin count is %d", pages_[i].GetPageId(), pages_[i].GetPinCount());
   }
 
   if (ret_flag) {

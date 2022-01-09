@@ -84,6 +84,8 @@ class ExtendibleHashTable {
    */
   void VerifyIntegrity();
 
+  void VerifyEmpty();
+
  private:
   /**
    * Hash - simple helper to downcast MurmurHash's 64-bit hash to 32-bit
@@ -135,6 +137,11 @@ class ExtendibleHashTable {
    * @return a pointer to a bucket page
    */
   HASH_TABLE_BUCKET_TYPE *FetchBucketPage(page_id_t bucket_page_id);
+
+  /**
+   * Create a new bucket page
+   */
+  HASH_TABLE_BUCKET_TYPE *NewBucketPage(page_id_t *page_id);
 
   /**
    * Performs insertion with an optional bucket splitting.

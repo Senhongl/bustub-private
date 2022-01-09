@@ -86,6 +86,12 @@ class HashTableBucketPage {
   void RemoveAt(uint32_t bucket_idx);
 
   /**
+   * Empty everything in the bucket, it should be called whenever the bucket is full
+   * and therefore we want to split it.
+   */
+  void EmptyAll(std::vector<KeyType> *keys, std::vector<ValueType> *values);
+
+  /**
    * Returns whether or not an index is occupied (key/value pair or tombstone)
    *
    * @param bucket_idx index to look at
