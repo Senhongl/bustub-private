@@ -17,11 +17,44 @@ namespace bustub {
 
 UpdateExecutor::UpdateExecutor(ExecutorContext *exec_ctx, const UpdatePlanNode *plan,
                                std::unique_ptr<AbstractExecutor> &&child_executor)
-    : AbstractExecutor(exec_ctx) {}
+    : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
-void UpdateExecutor::Init() {}
+void UpdateExecutor::Init() {
+  LOG_DEBUG("update init");
+  catalog_ = exec_ctx_->GetCatalog();
+  table_info_ = catalog_->GetTable(plan_->TableOid());
+  txn_ = exec_ctx_->GetTransaction();
+  child_executor_->Init();
+}
 
-bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) { return false; }
+bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
+  TableHeap *table_heap = table_info_->table_.get();
+  std::vector<IndexInfo *> indexes = catalog_->GetTableIndexes(table_info_->name_);
+  RID update_rid;
+  Tuple old_tuple;
+  Tuple new_tuple;
+
+  if (!child_executor_->Next(&old_tuple, &update_rid)) {
+    return false;
+  }
+
+  new_tuple = GenerateUpdatedTuple(old_tuple);
+  if (!table_heap->UpdateTuple(new_tuple, update_rid, txn_)) {
+    return false;
+  }
+
+  for (auto index_info : indexes) {
+    const auto column_idx = index_info->index_->GetKeyAttrs();
+    const auto old_index_key =
+        old_tuple.KeyFromTuple(table_info_->schema_, *index_info->index_->GetKeySchema(), column_idx);
+    const auto new_index_key =
+        new_tuple.KeyFromTuple(table_info_->schema_, *index_info->index_->GetKeySchema(), column_idx);
+    index_info->index_->DeleteEntry(old_index_key, update_rid, txn_);
+    index_info->index_->InsertEntry(new_index_key, update_rid, txn_);
+  }
+
+  return true;
+}
 
 Tuple UpdateExecutor::GenerateUpdatedTuple(const Tuple &src_tuple) {
   const auto &update_attrs = plan_->GetUpdateAttr();

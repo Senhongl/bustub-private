@@ -297,14 +297,15 @@ void HASH_TABLE_TYPE::Merge(Transaction *transaction, const KeyType &key, const 
   buffer_pool_manager_->UnpinPage(directory_page_id_, true, nullptr);
   buffer_pool_manager_->UnpinPage(page_id, true, nullptr);
   reinterpret_cast<Page *>(bucket_page)->RUnlatch();
-  auto split_image_page = FetchBucketPage(split_image_page_id);
+  auto new_page_id = KeyToPageId(key, dir_page);
+  auto split_image_page = FetchBucketPage(new_page_id);
   reinterpret_cast<Page *>(split_image_page)->RLatch();
   if (split_image_page->IsEmpty()) {
-    buffer_pool_manager_->UnpinPage(split_image_page_id, false, nullptr);
+    buffer_pool_manager_->UnpinPage(new_page_id, false, nullptr);
     reinterpret_cast<Page *>(split_image_page)->RUnlatch();
     Merge(transaction, key, value);
   } else {
-    buffer_pool_manager_->UnpinPage(split_image_page_id, false, nullptr);
+    buffer_pool_manager_->UnpinPage(new_page_id, false, nullptr);
     reinterpret_cast<Page *>(split_image_page)->RUnlatch();
   }
 }
