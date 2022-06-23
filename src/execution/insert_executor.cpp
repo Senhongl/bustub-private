@@ -21,10 +21,10 @@ InsertExecutor::InsertExecutor(ExecutorContext *exec_ctx, const InsertPlanNode *
     : AbstractExecutor(exec_ctx), plan_(plan), child_executor_(std::move(child_executor)) {}
 
 void InsertExecutor::Init() {
-  LOG_DEBUG("insert init");
   catalog_ = exec_ctx_->GetCatalog();
   table_info_ = catalog_->GetTable(plan_->TableOid());
   txn_ = exec_ctx_->GetTransaction();
+  lock_mgr_ = exec_ctx_->GetLockManager();
   if (plan_->IsRawInsert()) {
     is_raw_insert_ = true;
     raw_values_ = plan_->RawValues();
@@ -48,6 +48,7 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     if (!table_heap->InsertTuple(*tuple, &inserted_rid, txn_)) {
       return false;
     }
+    // lock_mgr_->LockExclusive(txn_, inserted_rid);
     iterator_++;
   } else {
     if (!child_executor_->Next(tuple, rid)) {
@@ -56,12 +57,16 @@ bool InsertExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
     if (!table_heap->InsertTuple(*tuple, &inserted_rid, txn_)) {
       return false;
     }
+    // lock_mgr_->LockExclusive(txn_, inserted_rid);
   }
 
   for (auto index_info : indexes) {
     const auto column_idx = index_info->index_->GetKeyAttrs();
     const auto index_key = tuple->KeyFromTuple(table_info_->schema_, *index_info->index_->GetKeySchema(), column_idx);
     index_info->index_->InsertEntry(index_key, inserted_rid, txn_);
+    // const IndexWriteRecord record(inserted_rid, plan_->TableOid(), WType::INSERT, *tuple, index_info->index_oid_,
+    //                               catalog_);
+    // txn_->AppendTableWriteRecord(record);
   }
   return true;
 }

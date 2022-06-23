@@ -105,10 +105,20 @@ class LockManager {
   bool Unlock(Transaction *txn, const RID &rid);
 
  private:
+  /**
+   * This latch protects everything inside the lock_table_.
+   */
   std::mutex latch_;
 
-  /** Lock table for lock requests. */
+  // Track who are waiting for a transaction to release the lock
+  // std::unordered_map<txn_id_t, std::unordered_set<txn_id_t>> waiting_list_;
+  std::unordered_map<txn_id_t, Transaction *> txn_map_;
+  // Track who are sleeping
+  std::unordered_map<txn_id_t, RID> sleeping_map_;
+  // Track who are waiting or holding the lock
   std::unordered_map<RID, LockRequestQueue> lock_table_;
+
+  bool LockHolded(txn_id_t txn_id, const RID &rid);
 };
 
 }  // namespace bustub

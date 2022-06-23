@@ -25,6 +25,7 @@ void UpdateExecutor::Init() {
   table_info_ = catalog_->GetTable(plan_->TableOid());
   txn_ = exec_ctx_->GetTransaction();
   child_executor_->Init();
+  lock_mgr_ = exec_ctx_->GetLockManager();
 }
 
 bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
@@ -37,6 +38,10 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
   if (!child_executor_->Next(&old_tuple, &update_rid)) {
     return false;
   }
+
+  // if (!lock_mgr_->LockUpgrade(txn_, update_rid)) {
+  //   lock_mgr_->LockExclusive(txn_, update_rid);
+  // }
 
   new_tuple = GenerateUpdatedTuple(old_tuple);
   if (!table_heap->UpdateTuple(new_tuple, update_rid, txn_)) {
@@ -51,6 +56,12 @@ bool UpdateExecutor::Next([[maybe_unused]] Tuple *tuple, RID *rid) {
         new_tuple.KeyFromTuple(table_info_->schema_, *index_info->index_->GetKeySchema(), column_idx);
     index_info->index_->DeleteEntry(old_index_key, update_rid, txn_);
     index_info->index_->InsertEntry(new_index_key, update_rid, txn_);
+    // const IndexWriteRecord delete_record(update_rid, plan_->TableOid(), WType::DELETE, old_tuple,
+    //                                      index_info->index_oid_, catalog_);
+    // const IndexWriteRecord insert_record(update_rid, plan_->TableOid(), WType::INSERT, new_tuple,
+    //                                      index_info->index_oid_, catalog_);
+    // txn_->AppendTableWriteRecord(delete_record);
+    // txn_->AppendTableWriteRecord(insert_record);
   }
 
   return true;

@@ -56,6 +56,7 @@ class SeqScanExecutor : public AbstractExecutor {
   Catalog *catalog_;
   TableInfo *table_info_;
   Transaction *txn_;
+  LockManager *lock_mgr_;
   const AbstractExpression *predicate_;
 };
 }  // namespace bustub

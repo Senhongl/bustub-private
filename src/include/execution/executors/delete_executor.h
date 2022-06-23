@@ -64,5 +64,6 @@ class DeleteExecutor : public AbstractExecutor {
   const TableInfo *table_info_;
   Catalog *catalog_;
   Transaction *txn_;
+  LockManager *lock_mgr_;
 };
 }  // namespace bustub

@@ -65,6 +65,7 @@ class InsertExecutor : public AbstractExecutor {
   TableInfo *table_info_;
   Transaction *txn_;
   bool is_raw_insert_;
+  LockManager *lock_mgr_;
   std::vector<std::vector<Value>> raw_values_;
   std::vector<std::vector<Value>>::iterator iterator_;
 };

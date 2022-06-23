@@ -74,5 +74,6 @@ class UpdateExecutor : public AbstractExecutor {
   std::unique_ptr<AbstractExecutor> child_executor_;
   Catalog *catalog_;
   Transaction *txn_;
+  LockManager *lock_mgr_;
 };
 }  // namespace bustub

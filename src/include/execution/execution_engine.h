@@ -67,10 +67,10 @@ class ExecutionEngine {
         }
       }
     } catch (Exception &e) {
-      // TODO(student): handle exceptions
       return false;
     }
 
+    // txn_mgr_->Commit(txn);
     return true;
   }
 

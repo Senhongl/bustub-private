@@ -20,16 +20,20 @@ SeqScanExecutor::SeqScanExecutor(ExecutorContext *exec_ctx, const SeqScanPlanNod
 }
 
 void SeqScanExecutor::Init() {
-  LOG_DEBUG("seq_scan init for %u", plan_->GetTableOid());
   catalog_ = exec_ctx_->GetCatalog();
   table_info_ = catalog_->GetTable(plan_->GetTableOid());
   txn_ = exec_ctx_->GetTransaction();
   iterator_ = TableIterator(table_info_->table_->Begin(txn_));
   predicate_ = plan_->GetPredicate();
+  lock_mgr_ = exec_ctx_->GetLockManager();
 }
 
 bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
   while (iterator_ != table_info_->table_->End()) {
+    // if (txn_->GetIsolationLevel() != IsolationLevel::READ_UNCOMMITTED) {
+    //   lock_mgr_->LockShared(txn_, iterator_->GetRid());
+    // }
+
     Tuple tmp_tuple = *iterator_;
     auto cols = GetOutputSchema()->GetColumns();
     std::vector<Value> extracted_vals;
@@ -48,13 +52,15 @@ bool SeqScanExecutor::Next(Tuple *tuple, RID *rid) {
 
     *tuple = Tuple(extracted_vals, GetOutputSchema());
     *rid = tmp_tuple.GetRid();
+    // if (txn_->GetIsolationLevel() == IsolationLevel::READ_COMMITTED) {
+    //   lock_mgr_->Unlock(txn_, iterator_->GetRid());
+    // }
     iterator_++;
     if (predicate_ == nullptr || predicate_->Evaluate(&tmp_tuple, &table_info_->schema_).GetAs<bool>()) {
       return true;
     }
   }
 
-  LOG_DEBUG("scan finish");
   return false;
 }
 
